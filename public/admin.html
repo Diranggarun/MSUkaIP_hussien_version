@@ -299,9 +299,13 @@ async function login(){
     document.getElementById('auth-screen').style.display='none';
     document.getElementById('app').style.display='block';
     loadAll();
+<<<<<<< HEAD
     setInterval(loadPending, 15000);
     // Auto-refresh online count and users every 5 seconds
     setInterval(()=>{ loadStats(); loadUsers(); }, 5000);
+=======
+    setInterval(loadPending,15000);
+>>>>>>> 05f729d726ec48474d98b2aeb09c97e61926e59c
   }catch{errEl.textContent='Cannot connect to server. Is XAMPP running?';}
 }
 

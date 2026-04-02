@@ -63,9 +63,12 @@ async function setupDatabase() {
       else { await conn.query('UPDATE users SET password_hash=?,name=?,role=?,account_status=? WHERE email=?',[hash,acc.name,acc.role,acc.status,acc.email]); console.log(`🔄  Reset:   ${acc.email} / ${acc.password}`); }
     }
     conn.release();
+<<<<<<< HEAD
     // Reset ALL users to offline on server start (in case of crash/restart)
     await db.query("UPDATE users SET status = 'offline'");
     console.log('✅  All users reset to offline');
+=======
+>>>>>>> 05f729d726ec48474d98b2aeb09c97e61926e59c
     console.log('\n🎉  Login:\n    student@cics.msu.edu / student123\n    admin@cics.msu.edu   / admin123\n');
   } catch (err) { console.error('❌  DB failed:', err.message); process.exit(1); }
 }
@@ -222,12 +225,20 @@ app.delete('/api/groups/:id', verifyToken, async(req,res)=>{
 app.get('/api/admin/stats',verifyToken,adminOnly,async(req,res)=>{
   try {
     const [[{totalUsers}]]=await db.query("SELECT COUNT(*) AS totalUsers FROM users WHERE account_status='approved'");
+<<<<<<< HEAD
     const [[{pendingUsers}]]=await db.query("SELECT COUNT(*) AS pendingUsers FROM users WHERE account_status='pending'");
     const [[{totalMessages}]]=await db.query('SELECT COUNT(*) AS totalMessages FROM messages');
     const [[{totalCalls}]]=await db.query('SELECT COUNT(*) AS totalCalls FROM calls');
     // Use real-time in-memory map for accurate online count
     const onlineCount = onlineUsers.size;
     res.json({totalUsers, onlineUsers:onlineCount, pendingUsers, totalMessages, totalCalls});
+=======
+    const [[{onlineUsers}]]=await db.query("SELECT COUNT(*) AS onlineUsers FROM users WHERE status='online'");
+    const [[{pendingUsers}]]=await db.query("SELECT COUNT(*) AS pendingUsers FROM users WHERE account_status='pending'");
+    const [[{totalMessages}]]=await db.query('SELECT COUNT(*) AS totalMessages FROM messages');
+    const [[{totalCalls}]]=await db.query('SELECT COUNT(*) AS totalCalls FROM calls');
+    res.json({totalUsers,onlineUsers,pendingUsers,totalMessages,totalCalls});
+>>>>>>> 05f729d726ec48474d98b2aeb09c97e61926e59c
   } catch { res.status(500).json({error:'Server error'}); }
 });
 app.get('/api/admin/pending',verifyToken,adminOnly,async(req,res)=>{
@@ -257,6 +268,7 @@ app.delete('/api/admin/users/:id/reject',verifyToken,adminOnly,async(req,res)=>{
   } catch(err){ res.status(500).json({error:'Server error: '+err.message}); }
 });
 app.get('/api/admin/users',verifyToken,adminOnly,async(req,res)=>{
+<<<<<<< HEAD
   try {
     const [rows]=await db.query("SELECT id,name,email,role,account_status,status,created_at FROM users WHERE account_status!='pending' ORDER BY created_at DESC");
     // Enrich with real-time online status from in-memory map
@@ -267,6 +279,10 @@ app.get('/api/admin/users',verifyToken,adminOnly,async(req,res)=>{
     }));
     res.json(enriched);
   } catch { res.status(500).json({error:'Server error'}); }
+=======
+  try { const [r]=await db.query("SELECT id,name,email,role,account_status,status,created_at FROM users WHERE account_status!='pending' ORDER BY created_at DESC"); res.json(r); }
+  catch { res.status(500).json({error:'Server error'}); }
+>>>>>>> 05f729d726ec48474d98b2aeb09c97e61926e59c
 });
 app.post('/api/admin/users',verifyToken,adminOnly,async(req,res)=>{
   const {name,email,password,role='student'}=req.body;
