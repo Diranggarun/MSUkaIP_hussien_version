@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MSUkaIP – Messenger</title>
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Segoe UI',sans-serif; background:#f0f2f5; height:100vh; overflow:hidden; }
+
+/* ── LAYOUT ── */
+#app { display:flex; height:100vh; }
+
+/* ── LEFT PANEL ── */
+.left-panel { width:320px; background:#fff; border-right:1px solid #e4e6eb; display:flex; flex-direction:column; flex-shrink:0; }
+
+/* Header */
+.left-header { padding:1rem 1rem .5rem; }
+.left-header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:.75rem; }
+.left-header-top h2 { font-size:1.3rem; font-weight:700; color:#1a1a1a; }
+.header-actions { display:flex; gap:6px; }
+.icon-btn { width:34px; height:34px; border-radius:50%; border:none; background:#f0f2f5; cursor:pointer; font-size:.95rem; display:flex; align-items:center; justify-content:center; }
+.icon-btn:hover { background:#e4e6eb; }
+
+/* Search */
+.search-box { position:relative; margin-bottom:.5rem; }
+.search-box input { width:100%; padding:.55rem .9rem .55rem 2.2rem; background:#f0f2f5; border:none; border-radius:20px; font-size:.88rem; outline:none; font-family:inherit; }
+.search-box::before { content:'🔍'; position:absolute; left:.65rem; top:50%; transform:translateY(-50%); font-size:.8rem; }
+
+/* Tabs */
+.conv-tabs { display:flex; border-bottom:1px solid #e4e6eb; }
+.conv-tab { flex:1; padding:.55rem; border:none; background:transparent; cursor:pointer; font-size:.83rem; color:#666; font-family:inherit; border-bottom:2px solid transparent; transition:all .15s; }
+.conv-tab.active { color:#1a3a5c; border-bottom-color:#1a3a5c; font-weight:500; }
+
+/* Conversation list */
+.conv-list { flex:1; overflow-y:auto; padding:.4rem 0; }
+.conv-item { display:flex; align-items:center; gap:10px; padding:.65rem 1rem; cursor:pointer; transition:background .1s; position:relative; }
+.conv-item:hover { background:#f5f5f5; }
+.conv-item.active { background:#e8f0fe; }
+.conv-item.active .conv-name { color:#1a3a5c; }
+.conv-avatar { position:relative; flex-shrink:0; }
+.avatar-circle { width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1rem; font-weight:700; color:#fff; flex-shrink:0; }
+.avatar-circle.blue   { background:#1a3a5c; }
+.avatar-circle.green  { background:#1D9E75; }
+.avatar-circle.orange { background:#e67e22; }
+.avatar-circle.purple { background:#8e44ad; }
+.avatar-circle.red    { background:#e74c3c; }
+.avatar-circle.group  { background:linear-gradient(135deg,#1a3a5c,#3498db); font-size:.85rem; }
+.online-badge { position:absolute; bottom:1px; right:1px; width:12px; height:12px; background:#2ecc71; border-radius:50%; border:2px solid #fff; }
+.conv-info { flex:1; min-width:0; }
+.conv-name { font-size:.9rem; font-weight:600; color:#1a1a1a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conv-preview { font-size:.78rem; color:#888; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+.conv-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+.conv-time { font-size:.7rem; color:#aaa; }
+.unread-badge { background:#1a3a5c; color:#fff; border-radius:10px; font-size:.65rem; padding:2px 6px; min-width:18px; text-align:center; }
+
+/* ── RIGHT PANEL ── */
+.right-panel { flex:1; display:flex; flex-direction:column; background:#f0f2f5; }
+
+/* Empty state */
+#empty-state { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#aaa; }
+#empty-state .big-icon { font-size:4rem; margin-bottom:1rem; }
+#empty-state h3 { font-size:1.1rem; color:#555; margin-bottom:.4rem; }
+#empty-state p  { font-size:.85rem; }
+
+/* Chat panel */
+#chat-panel { display:none; flex-direction:column; height:100vh; }
+#chat-panel.active { display:flex; }
+
+/* Chat header */
+.chat-header { background:#fff; padding:.75rem 1.2rem; border-bottom:1px solid #e4e6eb; display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.chat-header-info { flex:1; }
+.chat-header-info h3 { font-size:.95rem; font-weight:600; color:#1a1a1a; }
+.chat-header-info span { font-size:.75rem; color:#888; }
+.chat-header-actions { display:flex; gap:6px; }
+.header-action-btn { width:36px; height:36px; border-radius:50%; border:none; background:#f0f2f5; cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; }
+.header-action-btn:hover { background:#e4e6eb; }
+
+/* Messages area */
+#messages-area { flex:1; overflow-y:auto; padding:1rem 1.2rem; display:flex; flex-direction:column; gap:4px; }
+
+/* Date separator */
+.date-sep { text-align:center; margin:.75rem 0; }
+.date-sep span { background:#e4e6eb; color:#666; font-size:.72rem; padding:.2rem .75rem; border-radius:10px; }
+
+/* Message bubbles */
+.msg-row { display:flex; align-items:flex-end; gap:8px; margin-bottom:2px; }
+.msg-row.mine   { flex-direction:row-reverse; }
+.msg-row.theirs { flex-direction:row; }
+.msg-row.system, .msg-row.announcement { justify-content:center; }
+
+.msg-avatar { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.7rem; font-weight:700; color:#fff; background:#1a3a5c; flex-shrink:0; }
+
+.msg-content { display:flex; flex-direction:column; max-width:65%; }
+.msg-row.mine .msg-content { align-items:flex-end; }
+
+.msg-sender-name { font-size:.72rem; color:#888; margin-bottom:2px; padding:0 4px; }
+
+.bubble { padding:.55rem .9rem; border-radius:18px; font-size:.9rem; line-height:1.45; word-break:break-word; max-width:100%; }
+.msg-row.mine   .bubble { background:#1a3a5c; color:#fff; border-bottom-right-radius:4px; }
+.msg-row.theirs .bubble { background:#fff; color:#1a1a1a; border-bottom-left-radius:4px; box-shadow:0 1px 2px rgba(0,0,0,.1); }
+.msg-row.system .bubble { background:transparent; color:#aaa; font-size:.75rem; font-style:italic; padding:.2rem .5rem; box-shadow:none; }
+.msg-row.announcement .bubble { background:#fff3cd; color:#856404; border:1px solid #ffc107; border-radius:10px; padding:.6rem 1rem; text-align:center; }
+
+.msg-time { font-size:.65rem; color:#aaa; padding:0 4px; margin-top:2px; }
+
+/* File/image bubbles */
+.img-bubble { padding:.4rem; border-radius:14px; overflow:hidden; max-width:240px; }
+.img-bubble img { width:100%; border-radius:10px; display:block; cursor:pointer; }
+.img-caption { font-size:.72rem; opacity:.7; padding:.3rem .4rem 0; }
+.file-bubble { display:flex; align-items:center; gap:10px; padding:.6rem .9rem; min-width:200px; }
+.file-icon { font-size:1.8rem; flex-shrink:0; }
+.file-info { flex:1; overflow:hidden; }
+.file-info .fname { font-size:.83rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.file-info .fsize { font-size:.72rem; opacity:.7; }
+.file-dl { padding:.3rem .65rem; background:rgba(255,255,255,.25); border-radius:6px; color:inherit; text-decoration:none; font-size:.75rem; white-space:nowrap; flex-shrink:0; }
+.msg-row.theirs .file-dl { background:#f0f2f5; }
+
+/* Typing indicator */
+#typing-row { height:24px; padding:0 1.2rem; display:flex; align-items:center; }
+.typing-dots { display:flex; gap:3px; align-items:center; }
+.typing-dots span { width:6px; height:6px; background:#aaa; border-radius:50%; animation:bounce .9s infinite; }
+.typing-dots span:nth-child(2) { animation-delay:.15s; }
+.typing-dots span:nth-child(3) { animation-delay:.3s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
+.typing-name { font-size:.75rem; color:#888; margin-left:6px; }
+
+/* Input row */
+.input-row { background:#fff; padding:.65rem 1rem; border-top:1px solid #e4e6eb; display:flex; align-items:flex-end; gap:8px; flex-shrink:0; }
+.attach-btn { width:36px; height:36px; border-radius:50%; border:none; background:#f0f2f5; cursor:pointer; font-size:1rem; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.attach-btn:hover { background:#e4e6eb; }
+#msg-input { flex:1; padding:.6rem .9rem; background:#f0f2f5; border:none; border-radius:20px; font-size:.9rem; resize:none; max-height:100px; outline:none; font-family:inherit; line-height:1.4; }
+.send-btn { width:36px; height:36px; border-radius:50%; border:none; background:#1a3a5c; color:#fff; cursor:pointer; font-size:1rem; flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:background .15s; }
+.send-btn:hover { background:#142d47; }
+.send-btn:disabled { background:#ccc; cursor:default; }
+
+/* ── CALL PANEL ── */
+#incoming-call { display:none; position:fixed; bottom:24px; right:24px; background:#1a3a5c; color:#fff; border-radius:16px; padding:1.2rem 1.5rem; z-index:200; min-width:260px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
+#incoming-call.show { display:block; }
+#incoming-call h4 { margin-bottom:.25rem; }
+#incoming-call p  { font-size:.82rem; opacity:.7; margin-bottom:1rem; }
+.call-btns { display:flex; gap:10px; }
+.btn-accept { flex:1; padding:.6rem; background:#2ecc71; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:500; font-family:inherit; }
+.btn-reject { flex:1; padding:.6rem; background:#e74c3c; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:500; font-family:inherit; }
+
+#call-panel { display:none; position:fixed; bottom:24px; right:24px; background:#1a3a5c; color:#fff; border-radius:16px; padding:1.2rem 1.5rem; z-index:200; min-width:280px; box-shadow:0 8px 32px rgba(0,0,0,.3); }
+#call-panel.show { display:block; }
+#call-panel h4 { font-size:1rem; margin-bottom:.25rem; }
+#call-panel p  { font-size:.82rem; opacity:.7; margin-bottom:.5rem; }
+.call-timer { font-size:1.4rem; font-weight:600; text-align:center; letter-spacing:.05em; margin:.5rem 0; }
+.call-controls { display:flex; gap:10px; justify-content:center; margin-top:.75rem; }
+.ctrl-btn { width:48px; height:48px; border-radius:50%; border:none; cursor:pointer; font-size:1.1rem; }
+.ctrl-btn.mute   { background:rgba(255,255,255,.15); color:#fff; }
+.ctrl-btn.mute.active { background:#f39c12; }
+.ctrl-btn.hangup { background:#e74c3c; color:#fff; }
+
+/* Group call */
+#group-call-panel { display:none; position:fixed; inset:0; background:rgba(10,20,40,.95); z-index:300; flex-direction:column; align-items:center; justify-content:center; color:#fff; }
+#group-call-panel.show { display:flex; }
+#group-call-panel h3 { margin-bottom:1.5rem; opacity:.8; }
+#peers-grid { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; max-width:700px; }
+.peer-card { background:rgba(255,255,255,.08); border-radius:12px; padding:1rem 1.5rem; text-align:center; min-width:130px; }
+.peer-card .pa { width:52px; height:52px; border-radius:50%; background:#3a7bd5; margin:0 auto .5rem; display:flex; align-items:center; justify-content:center; font-size:1.2rem; font-weight:700; }
+.peer-card p { font-size:.83rem; opacity:.8; }
+#group-controls { display:flex; gap:12px; margin-top:2rem; }
+.g-btn { padding:.65rem 1.4rem; border:none; border-radius:8px; cursor:pointer; font-size:.9rem; font-weight:500; font-family:inherit; }
+.g-btn.mute-g  { background:rgba(255,255,255,.15); color:#fff; }
+.g-btn.leave-g { background:#e74c3c; color:#fff; }
+
+/* New group modal */
+#modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:400; align-items:center; justify-content:center; }
+#modal-overlay.open { display:flex; }
+.modal { background:#fff; border-radius:14px; padding:1.5rem; width:380px; max-height:80vh; display:flex; flex-direction:column; }
+.modal h3 { margin-bottom:1rem; color:#1a1a1a; font-size:1rem; }
+.modal input { width:100%; padding:.6rem .9rem; border:1px solid #ddd; border-radius:8px; font-size:.88rem; margin-bottom:.75rem; outline:none; font-family:inherit; }
+.modal input:focus { border-color:#1a3a5c; }
+.members-list { flex:1; overflow-y:auto; max-height:250px; margin-bottom:.75rem; }
+.member-check { display:flex; align-items:center; gap:10px; padding:.5rem .4rem; border-radius:8px; cursor:pointer; }
+.member-check:hover { background:#f5f5f5; }
+.member-check input[type=checkbox] { width:16px; height:16px; cursor:pointer; }
+.modal-actions { display:flex; gap:8px; justify-content:flex-end; }
+.btn-cancel  { padding:.55rem 1rem; border:1px solid #ddd; background:#fff; border-radius:6px; cursor:pointer; font-family:inherit; }
+.btn-confirm { padding:.55rem 1rem; background:#1a3a5c; color:#fff; border:none; border-radius:6px; cursor:pointer; font-family:inherit; }
+
+audio { display:none; }
+</style>
+</head>
+<body>
+<div id="app" style="display:none;">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="left-header">
+      <div class="left-header-top">
+        <h2>MSUkaIP</h2>
+        <div class="header-actions">
+          <button class="icon-btn" onclick="openNewGroupModal()" title="New Group Chat">✏️</button>
+          <button class="icon-btn" onclick="window.location.href='/admin.html'" title="Admin" id="admin-btn" style="display:none;">⚙️</button>
+          <button class="icon-btn" onclick="logout()" title="Sign Out">🚪</button>
+        </div>
+      </div>
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="Search conversations…" oninput="filterConversations()"/>
+      </div>
+    </div>
+
+    <div class="conv-tabs">
+      <button class="conv-tab active" id="tab-all"     onclick="switchConvTab('all',this)">All</button>
+      <button class="conv-tab"        id="tab-private" onclick="switchConvTab('private',this)">Private</button>
+      <button class="conv-tab"        id="tab-groups"  onclick="switchConvTab('groups',this)">Groups</button>
+    </div>
+
+    <div class="conv-list" id="conv-list"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div id="empty-state">
+      <div class="big-icon">💬</div>
+      <h3>Your Messages</h3>
+      <p>Select a conversation or start a new one</p>
+    </div>
+
+    <div id="chat-panel">
+      <div class="chat-header">
+        <div class="conv-avatar">
+          <div class="avatar-circle" id="chat-avatar" style="width:38px;height:38px;font-size:.85rem;">?</div>
+        </div>
+        <div class="chat-header-info">
+          <h3 id="chat-title">—</h3>
+          <span id="chat-subtitle">—</span>
+        </div>
+        <div class="chat-header-actions">
+          <button class="header-action-btn" id="call-btn"       onclick="startCall()"      title="Voice Call">📞</button>
+          <button class="header-action-btn" id="group-call-btn" onclick="startGroupCall()" title="Group Call" style="display:none;">👥</button>
+        </div>
+      </div>
+
+      <div id="messages-area"></div>
+      <div id="typing-row"></div>
+
+      <div class="input-row">
+        <input type="file" id="file-input" accept="image/*,.pdf,.doc,.docx" style="display:none" onchange="uploadFile()"/>
+        <button class="attach-btn" id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach file">📎</button>
+        <textarea id="msg-input" rows="1" placeholder="Aa"></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INCOMING CALL -->
+<div id="incoming-call">
+  <h4>📞 Incoming Call</h4>
+  <p id="incoming-caller-name">Someone is calling…</p>
+  <div class="call-btns">
+    <button class="btn-accept" onclick="acceptCall()">Accept</button>
+    <button class="btn-reject" onclick="rejectCall()">Reject</button>
+  </div>
+</div>
+
+<!-- ACTIVE CALL -->
+<div id="call-panel">
+  <h4>📞 On Call</h4>
+  <p id="call-peer-name">—</p>
+  <div class="call-timer" id="call-timer">00:00</div>
+  <div class="call-controls">
+    <button class="ctrl-btn mute" id="mute-btn" onclick="toggleMute()">🎤</button>
+    <button class="ctrl-btn hangup" onclick="hangup()">📵</button>
+  </div>
+</div>
+
+<!-- GROUP CALL -->
+<div id="group-call-panel">
+  <h3>👥 Group Call — CICS LAN</h3>
+  <div id="peers-grid"></div>
+  <div id="group-controls">
+    <button class="g-btn mute-g"  id="group-mute-btn" onclick="toggleGroupMute()">🎤 Mute</button>
+    <button class="g-btn leave-g" onclick="leaveGroupCall()">📵 Leave</button>
+  </div>
+</div>
+
+<!-- NEW GROUP MODAL -->
+<div id="modal-overlay">
+  <div class="modal">
+    <h3>✏️ Create Group Chat</h3>
+    <input type="text" id="group-name-input" placeholder="Group name (e.g. BSIT 3-A)"/>
+    <div class="members-list" id="members-checklist"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="createGroup()">Create Group</button>
+    </div>
+  </div>
+</div>
+
+<audio id="remote-audio" autoplay></audio>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let socket, currentUser;
+let onlineUsers    = [];
+let conversations  = {}; // key -> { type, name, messages, unread, lastMsg, lastTime }
+let activeConvKey  = null;
+let typingTimeout;
+
+// Call state
+let localStream = null, peerConnection = null;
+let currentCallId = null, currentCallTarget = null;
+let callTimerInterval = null, callSeconds = 0, isMuted = false;
+
+// Group call state
+let groupStream = null, groupPeers = {}, currentRoomId = null, isGroupMuted = false;
+
+const iceConfig = { iceServers:[{ urls:'stun:stun.l.google.com:19302' }] };
+
+const COLORS = ['blue','green','orange','purple','red'];
+function colorFor(str) { let h=0; for(let c of str) h=(h<<5)-h+c.charCodeAt(0); return COLORS[Math.abs(h)%COLORS.length]; }
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function formatTime(ts) { return new Date(ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}); }
+function formatFileSize(b) { if(!b)return''; if(b<1024)return b+' B'; if(b<1048576)return(b/1024).toFixed(1)+' KB'; return(b/1048576).toFixed(1)+' MB'; }
+
+// ── Boot from localStorage ────────────────────────────────────────────────────
+window.onload = () => {
+  const token = localStorage.getItem('msuka_token');
+  const name  = localStorage.getItem('msuka_name');
+  const role  = localStorage.getItem('msuka_role');
+  const email = localStorage.getItem('msuka_email');
+  if (!token) return window.location.href = '/';
+  currentUser = { token, name, role, email };
+  document.getElementById('app').style.display = 'flex';
+  if (role === 'admin') document.getElementById('admin-btn').style.display = 'flex';
+  initSocket();
+};
+
+// ── Socket ────────────────────────────────────────────────────────────────────
+function initSocket() {
+  socket = io({ auth:{ token: currentUser.token } });
+
+  socket.on('connect', () => {
+    console.log('✅ Connected');
+    initConversations();
+  });
+
+  socket.on('connect_error', err => {
+    alert('Connection error: ' + err.message);
+    window.location.href = '/';
+  });
+
+  socket.on('users:update', users => {
+    onlineUsers = users.filter(u => u.email !== currentUser.email);
+    updateConversationList();
+  });
+
+  socket.on('messages:history', ({ key, messages }) => {
+    if (!conversations[key]) return;
+    conversations[key].messages = messages;
+    if (activeConvKey === key) renderMessages(key);
+    updateConversationList();
+  });
+
+  socket.on('message:new', msg => {
+    const key = msg.convKey;
+    if (!conversations[key]) {
+      conversations[key] = { type: msg.convType || 'private', name: msg.senderName || msg.sender, messages:[], unread:0, lastMsg:'', lastTime:'' };
+    }
+    conversations[key].messages.push(msg);
+    conversations[key].lastMsg  = msg.type === 'image' ? '📷 Image' : msg.type === 'file' ? '📎 ' + msg.file_name : msg.text;
+    conversations[key].lastTime = msg.timestamp;
+
+    if (activeConvKey === key) {
+      appendMessage(msg, key);
+    } else {
+      conversations[key].unread = (conversations[key].unread || 0) + 1;
+    }
+    updateConversationList();
+  });
+
+  socket.on('groups:list', groups => {
+    groups.forEach(g => {
+      const key = 'group_' + g.id;
+      if (!conversations[key]) {
+        conversations[key] = { type:'group', id:g.id, name:g.name, messages:[], unread:0, lastMsg:'', lastTime:g.created_at };
+      }
+    });
+    updateConversationList();
+  });
+
+  socket.on('typing:update', ({ name, convKey, typing }) => {
+    if (activeConvKey !== convKey) return;
+    const row = document.getElementById('typing-row');
+    if (typing) {
+      row.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div><span class="typing-name">${name} is typing…</span>`;
+    } else {
+      row.innerHTML = '';
+    }
+  });
+
+  // VoIP
+  socket.on('call:incoming', ({ callId, from }) => {
+    currentCallId = callId; currentCallTarget = from.socketId;
+    document.getElementById('incoming-caller-name').textContent = `${from.name} is calling…`;
+    document.getElementById('incoming-call').classList.add('show');
+  });
+  socket.on('call:ringing',  ({ targetName }) => showCallPanel(`Calling ${targetName}…`));
+  socket.on('call:accepted', async ({ callId, answererSocketId, answererName }) => {
+    currentCallTarget = answererSocketId;
+    document.getElementById('call-peer-name').textContent = `In call with ${answererName}`;
+    startCallTimer();
+    await startWebRTC(answererSocketId, true);
+  });
+  socket.on('call:rejected', ({ rejectedBy }) => { hideCallPanel(); alert(`${rejectedBy} rejected your call.`); });
+  socket.on('call:ended',    () => { endCallUI(); });
+  socket.on('webrtc:offer',  async ({ offer, fromSocketId }) => {
+    await startWebRTC(fromSocketId, false);
+    await peerConnection.setRemoteDescription(offer);
+    const answer = await peerConnection.createAnswer();
+    await peerConnection.setLocalDescription(answer);
+    socket.emit('webrtc:answer', { targetSocketId: fromSocketId, answer });
+  });
+  socket.on('webrtc:answer',        async ({ answer })    => await peerConnection?.setRemoteDescription(answer));
+  socket.on('webrtc:ice-candidate', ({ candidate })       => peerConnection?.addIceCandidate(candidate));
+
+  // Group call
+  socket.on('room:members',     async ({ members }) => { for (const m of members) await createGroupPeer(m.socketId, m.name, true); });
+  socket.on('room:peer-joined', async ({ socketId, name }) => { addPeerCard(socketId, name); await createGroupPeer(socketId, name, false); });
+  socket.on('room:peer-left',   ({ socketId }) => { groupPeers[socketId]?.close(); delete groupPeers[socketId]; document.getElementById(`peer-${socketId}`)?.remove(); });
+  socket.on('room:offer',  async ({ offer,  fromSocketId }) => { const pc=groupPeers[fromSocketId]; if(!pc)return; await pc.setRemoteDescription(offer); const a=await pc.createAnswer(); await pc.setLocalDescription(a); socket.emit('room:answer',{targetSocketId:fromSocketId,answer:a}); });
+  socket.on('room:answer', async ({ answer, fromSocketId }) => await groupPeers[fromSocketId]?.setRemoteDescription(answer));
+  socket.on('room:ice-candidate', ({ candidate, fromSocketId }) => groupPeers[fromSocketId]?.addIceCandidate(candidate));
+}
+
+// ── Init conversations ────────────────────────────────────────────────────────
+function initConversations() {
+  // General group is always first
+  conversations['group_general'] = {
+    type:'group', id:'general', name:'General (Everyone)',
+    messages:[], unread:0, lastMsg:'CICS broadcast channel', lastTime:''
+  };
+  // Request groups and history
+  socket.emit('groups:get');
+  socket.emit('messages:get', { key:'group_general' });
+  updateConversationList();
+}
+
+// ── Conversation list ─────────────────────────────────────────────────────────
+function updateConversationList() {
+  const search  = document.getElementById('search-input').value.toLowerCase();
+  const tabBtn  = document.querySelector('.conv-tab.active');
+  const tabName = tabBtn?.id?.replace('tab-','') || 'all';
+  const list    = document.getElementById('conv-list');
+
+  // Build items: groups first, then online users (private)
+  let items = [];
+
+  // Groups
+  Object.entries(conversations).forEach(([key, conv]) => {
+    if (conv.type !== 'group') return;
+    if (tabName === 'private') return;
+    if (search && !conv.name.toLowerCase().includes(search)) return;
+    items.push({ key, conv, isGroup:true });
+  });
+
+  // Private (one per online user)
+  onlineUsers.forEach(u => {
+    if (tabName === 'groups') return;
+    if (search && !u.name.toLowerCase().includes(search)) return;
+    const key = 'private_' + u.email;
+    if (!conversations[key]) conversations[key] = { type:'private', email:u.email, name:u.name, messages:[], unread:0, lastMsg:'', lastTime:'' };
+    items.push({ key, conv:conversations[key], user:u, isGroup:false });
+  });
+
+  // Sort by lastTime desc
+  items.sort((a,b) => {
+    if (!a.conv.lastTime && !b.conv.lastTime) return 0;
+    if (!a.conv.lastTime) return 1;
+    if (!b.conv.lastTime) return -1;
+    return new Date(b.conv.lastTime) - new Date(a.conv.lastTime);
+  });
+
+  list.innerHTML = items.map(({ key, conv, user, isGroup }) => {
+    const isOnline = user ? onlineUsers.some(u=>u.email===user.email) : false;
+    const color    = isGroup ? 'group' : colorFor(conv.name);
+    const init     = initials(conv.name);
+    const time     = conv.lastTime ? formatTime(conv.lastTime) : '';
+    const unread   = conv.unread > 0 ? `<div class="unread-badge">${conv.unread}</div>` : '';
+    const onlineDot= (!isGroup && isOnline) ? '<div class="online-badge"></div>' : '';
+    return `
+      <div class="conv-item ${activeConvKey===key?'active':''}" onclick="openConversation('${key}')">
+        <div class="conv-avatar">
+          <div class="avatar-circle ${color}">${isGroup?'👥':init}</div>
+          ${onlineDot}
+        </div>
+        <div class="conv-info">
+          <div class="conv-name">${conv.name}</div>
+          <div class="conv-preview">${conv.lastMsg || (isGroup?'Group chat':'Click to start chatting')}</div>
+        </div>
+        <div class="conv-meta">
+          <span class="conv-time">${time}</span>
+          ${unread}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function filterConversations() { updateConversationList(); }
+function switchConvTab(name, btn) {
+  document.querySelectorAll('.conv-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  updateConversationList();
+}
+
+// ── Open conversation ─────────────────────────────────────────────────────────
+function openConversation(key) {
+  activeConvKey = key;
+  const conv = conversations[key];
+  conv.unread = 0;
+
+  // Update header
+  const isGroup  = conv.type === 'group';
+  const color    = isGroup ? 'group' : colorFor(conv.name);
+  const av       = document.getElementById('chat-avatar');
+  av.className   = `avatar-circle ${color}`;
+  av.style.width = '38px'; av.style.height='38px'; av.style.fontSize='.85rem';
+  av.textContent = isGroup ? '👥' : initials(conv.name);
+
+  document.getElementById('chat-title').textContent    = conv.name;
+  document.getElementById('chat-subtitle').textContent = isGroup ? 'Group chat' : (onlineUsers.some(u=>u.email===conv.email) ? '🟢 Online' : '⚫ Offline');
+
+  // Show/hide call buttons
+  document.getElementById('call-btn').style.display       = isGroup ? 'none' : 'flex';
+  document.getElementById('group-call-btn').style.display = isGroup ? 'flex' : 'none';
+
+  // Show chat panel
+  document.getElementById('empty-state').style.display = 'none';
+  const panel = document.getElementById('chat-panel');
+  panel.classList.add('active');
+
+  // Request messages if not loaded
+  if (!conv.messages || conv.messages.length === 0) {
+    socket.emit('messages:get', { key });
+  }
+
+  renderMessages(key);
+  updateConversationList();
+  document.getElementById('msg-input').focus();
+}
+
+// ── Render messages ───────────────────────────────────────────────────────────
+function renderMessages(key) {
+  const area = document.getElementById('messages-area');
+  const conv = conversations[key];
+  if (!conv) return;
+  area.innerHTML = '';
+  (conv.messages || []).forEach(msg => appendMessage(msg, key));
+  area.scrollTop = area.scrollHeight;
+}
+
+function appendMessage(msg, key) {
+  if (!key) key = activeConvKey;
+  const area  = document.getElementById('messages-area');
+  const isMine = msg.sender === currentUser.name;
+  const isSystem = msg.type === 'system';
+  const isAnnouncement = msg.type === 'announcement';
+  const conv = conversations[key];
+  const isGroup = conv?.type === 'group';
+
+  const row = document.createElement('div');
+  row.className = `msg-row ${isSystem||isAnnouncement ? msg.type : isMine ? 'mine' : 'theirs'}`;
+
+  if (isSystem) {
+    row.innerHTML = `<div class="bubble">${msg.text}</div>`;
+  } else if (isAnnouncement) {
+    row.innerHTML = `<div class="bubble">📢 <strong>${msg.sender}:</strong> ${msg.text}</div>`;
+  } else {
+    const avatarHtml = !isMine ? `<div class="msg-avatar" style="background:${avatarColor(msg.sender)}">${initials(msg.sender)}</div>` : '';
+    const nameHtml   = (!isMine && isGroup) ? `<div class="msg-sender-name">${msg.sender}</div>` : '';
+    let bubbleHtml   = '';
+
+    if (msg.type === 'image') {
+      bubbleHtml = `<div class="bubble img-bubble" style="padding:.4rem;">
+        <img src="${msg.file_url}" alt="${msg.file_name}" onclick="window.open('${msg.file_url}','_blank')"/>
+        <div class="img-caption">${msg.file_name} · ${formatFileSize(msg.file_size)}</div>
+      </div>`;
+    } else if (msg.type === 'file') {
+      const icon = msg.file_type?.includes('pdf') ? '📄' : '📝';
+      bubbleHtml = `<div class="bubble file-bubble">
+        <span class="file-icon">${icon}</span>
+        <div class="file-info">
+          <div class="fname">${msg.file_name}</div>
+          <div class="fsize">${formatFileSize(msg.file_size)}</div>
+        </div>
+        <a href="${msg.file_url}" download="${msg.file_name}" class="file-dl">⬇ Save</a>
+      </div>`;
+    } else {
+      bubbleHtml = `<div class="bubble">${msg.text}</div>`;
+    }
+
+    row.innerHTML = `
+      ${avatarHtml}
+      <div class="msg-content">
+        ${nameHtml}
+        ${bubbleHtml}
+        <div class="msg-time">${formatTime(msg.timestamp)}</div>
+      </div>`;
+  }
+
+  area.appendChild(row);
+  area.scrollTop = area.scrollHeight;
+}
+
+function avatarColor(name) {
+  const palette = ['#1a3a5c','#1D9E75','#e67e22','#8e44ad','#e74c3c','#2980b9','#16a085'];
+  let h=0; for(let c of name) h=(h<<5)-h+c.charCodeAt(0);
+  return palette[Math.abs(h)%palette.length];
+}
+
+// ── Send message ──────────────────────────────────────────────────────────────
+function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const text  = input.value.trim();
+  if (!text || !socket || !activeConvKey) return;
+  socket.emit('message:send', { text, convKey: activeConvKey });
+  input.value = '';
+  socket.emit('typing:stop', { convKey: activeConvKey });
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+async function uploadFile() {
+  const input = document.getElementById('file-input');
+  const file  = input.files[0];
+  if (!file || !activeConvKey) return;
+  if (file.size > 5*1024*1024) { alert('Max file size is 5MB!'); input.value=''; return; }
+
+  const btn = document.getElementById('attach-btn');
+  btn.textContent = '⏳'; btn.disabled = true;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('convKey', activeConvKey);
+
+  try {
+    const res  = await fetch('/api/upload', {
+      method:'POST',
+      headers:{ Authorization:`Bearer ${currentUser.token}` },
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) alert(data.error || 'Upload failed');
+  } catch { alert('Upload failed'); }
+  finally { btn.textContent='📎'; btn.disabled=false; input.value=''; }
+}
+
+// ── Create group ──────────────────────────────────────────────────────────────
+function openNewGroupModal() {
+  const list = document.getElementById('members-checklist');
+  list.innerHTML = onlineUsers.map(u => `
+    <label class="member-check">
+      <input type="checkbox" value="${u.email}" data-name="${u.name}"/>
+      <div class="avatar-circle ${colorFor(u.name)}" style="width:32px;height:32px;font-size:.72rem;">${initials(u.name)}</div>
+      <span style="font-size:.88rem;">${u.name}</span>
+    </label>`).join('');
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+
+function createGroup() {
+  const name    = document.getElementById('group-name-input').value.trim();
+  const checked = [...document.querySelectorAll('#members-checklist input:checked')];
+  if (!name) { alert('Please enter a group name'); return; }
+  const members = checked.map(c => ({ email:c.value, name:c.dataset.name }));
+  socket.emit('group:create', { name, members });
+  document.getElementById('group-name-input').value = '';
+  closeModal();
+}
+
+// ── Typing ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('msg-input');
+  input.addEventListener('keydown', e => {
+    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); return; }
+    if (socket && activeConvKey) {
+      socket.emit('typing:start', { convKey: activeConvKey });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => socket.emit('typing:stop', { convKey: activeConvKey }), 2000);
+    }
+  });
+});
+
+// ── 1-on-1 VoIP ──────────────────────────────────────────────────────────────
+async function startCall() {
+  const conv = conversations[activeConvKey];
+  if (!conv || conv.type !== 'private') return;
+  const target = onlineUsers.find(u => u.email === conv.email);
+  if (!target) return alert('User is offline');
+  try { localStream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+  catch { return alert('Microphone access denied'); }
+  currentCallTarget = target.socketId;
+  socket.emit('call:initiate', { targetSocketId: target.socketId });
+}
+
+async function acceptCall() {
+  document.getElementById('incoming-call').classList.remove('show');
+  showCallPanel('Connecting…');
+  startCallTimer();
+  try { localStream = await navigator.mediaDevices.getUserMedia({ audio:true }); }
+  catch { return alert('Microphone access denied'); }
+  socket.emit('call:accept', { callId:currentCallId, callerSocketId:currentCallTarget });
+}
+
+function rejectCall() {
+  document.getElementById('incoming-call').classList.remove('show');
+  socket.emit('call:reject', { callId:currentCallId, callerSocketId:currentCallTarget });
+  currentCallId=null; currentCallTarget=null;
+}
+
+function hangup() {
+  socket.emit('call:end', { callId:currentCallId, targetSocketId:currentCallTarget });
+  endCallUI();
+}
+
+function endCallUI() {
+  peerConnection?.close(); peerConnection=null;
+  localStream?.getTracks().forEach(t=>t.stop()); localStream=null;
+  clearInterval(callTimerInterval); callSeconds=0;
+  hideCallPanel();
+}
+
+function showCallPanel(name) {
+  document.getElementById('call-peer-name').textContent = name;
+  document.getElementById('call-timer').textContent = '00:00';
+  document.getElementById('call-panel').classList.add('show');
+}
+
+function hideCallPanel() { document.getElementById('call-panel').classList.remove('show'); }
+
+function startCallTimer() {
+  callSeconds=0; clearInterval(callTimerInterval);
+  callTimerInterval = setInterval(() => {
+    callSeconds++;
+    const m=String(Math.floor(callSeconds/60)).padStart(2,'0');
+    const s=String(callSeconds%60).padStart(2,'0');
+    document.getElementById('call-timer').textContent=`${m}:${s}`;
+  },1000);
+}
+
+function toggleMute() {
+  if(!localStream)return;
+  isMuted=!isMuted;
+  localStream.getAudioTracks().forEach(t=>t.enabled=!isMuted);
+  const btn=document.getElementById('mute-btn');
+  btn.textContent=isMuted?'🔇':'🎤';
+  btn.classList.toggle('active',isMuted);
+}
+
+async function startWebRTC(targetSocketId, isInitiator) {
+  peerConnection = new RTCPeerConnection(iceConfig);
+  localStream?.getTracks().forEach(t=>peerConnection.addTrack(t,localStream));
+  peerConnection.ontrack = e => document.getElementById('remote-audio').srcObject=e.streams[0];
+  peerConnection.onicecandidate = e => { if(e.candidate) socket.emit('webrtc:ice-candidate',{targetSocketId,candidate:e.candidate}); };
+  if (isInitiator) {
+    const offer=await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    socket.emit('webrtc:offer',{targetSocketId,offer});
+  }
+}
+
+// ── Group call ────────────────────────────────────────────────────────────────
+async function startGroupCall() {
+  try { groupStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch { return alert('Microphone access denied'); }
+  currentRoomId = 'room-'+Date.now();
+  document.getElementById('peers-grid').innerHTML='';
+  document.getElementById('group-call-panel').classList.add('show');
+  addPeerCard('self', currentUser.name+' (you)');
+  socket.emit('room:join',{roomId:currentRoomId});
+}
+
+function leaveGroupCall() {
+  socket.emit('room:leave',{roomId:currentRoomId});
+  Object.values(groupPeers).forEach(pc=>pc.close());
+  groupPeers={}; groupStream?.getTracks().forEach(t=>t.stop()); groupStream=null; currentRoomId=null;
+  document.getElementById('group-call-panel').classList.remove('show');
+}
+
+function toggleGroupMute() {
+  if(!groupStream)return;
+  isGroupMuted=!isGroupMuted;
+  groupStream.getAudioTracks().forEach(t=>t.enabled=!isGroupMuted);
+  document.getElementById('group-mute-btn').textContent=isGroupMuted?'🔇 Unmute':'🎤 Mute';
+}
+
+function addPeerCard(sid, name) {
+  if(document.getElementById(`peer-${sid}`))return;
+  const card=document.createElement('div');
+  card.className='peer-card'; card.id=`peer-${sid}`;
+  card.innerHTML=`<div class="pa">${initials(name)}</div><p>${name}</p>`;
+  document.getElementById('peers-grid').appendChild(card);
+}
+
+async function createGroupPeer(targetSocketId, targetName, isInitiator) {
+  addPeerCard(targetSocketId,targetName);
+  const pc=new RTCPeerConnection(iceConfig);
+  groupPeers[targetSocketId]=pc;
+  groupStream?.getTracks().forEach(t=>pc.addTrack(t,groupStream));
+  pc.ontrack=e=>{ const a=new Audio(); a.srcObject=e.streams[0]; a.autoplay=true; document.body.appendChild(a); };
+  pc.onicecandidate=e=>{ if(e.candidate) socket.emit('room:ice-candidate',{targetSocketId,candidate:e.candidate}); };
+  if(isInitiator){ const o=await pc.createOffer(); await pc.setLocalDescription(o); socket.emit('room:offer',{targetSocketId,offer:o}); }
+}
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+function logout() {
+  if(socket)socket.disconnect();
+  localStorage.clear();
+  window.location.href='/';
+}
+</script>
+</body>
+</html>
